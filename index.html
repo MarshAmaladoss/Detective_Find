@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hidden Detective: Offline SD Edition</title>
+    <title>Hidden Detective: New Cases</title>
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; touch-action: manipulation; }
         body {
             margin: 0; padding: 0; width: 100vw; height: 100vh;
             background: #140f0b; font-family: 'Segoe UI', sans-serif; color: #fff;
@@ -18,30 +18,50 @@
             border-bottom: 3px solid #e67e22; z-index: 10;
         }
         .hud-title { color: #e67e22; font-weight: 900; letter-spacing: 1px; }
-        .hud-timer { color: #ff4444; font-size: 20px; font-weight: bold; }
+        .hud-timer { color: #ff4444; font-size: 22px; font-weight: bold; }
         .hud-score { color: #00ff88; font-weight: bold; }
 
         .tray-container {
             width: 100%; background: #221810; padding: 12px;
-            display: flex; justify-content: center; flex-wrap: wrap; gap: 12px;
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 10px;
             border-bottom: 2px solid #3a271a; min-height: 55px;
         }
         .clue-tag {
-            background: #0f0a06; padding: 6px 16px; border-radius: 20px;
-            border: 1px solid #e67e22; font-size: 14px; transition: all 0.3s;
+            background: #0f0a06; padding: 6px 14px; border-radius: 20px;
+            border: 1px solid #e67e22; font-size: 13px; transition: all 0.3s;
         }
         .clue-tag.found {
             background: #1b3d1e; border-color: #00ff88; color: #85ff9e;
             text-decoration: line-through; opacity: 0.5;
         }
 
-        #scene-container {
-            position: relative; width: 95%; max-width: 800px;
-            aspect-ratio: 1.63 / 1; margin: 20px 0;
-            border: 5px solid #3a271a; border-radius: 12px;
-            overflow: hidden; box-shadow: 0 12px 35px rgba(0,0,0,0.8);
+        /* Interactive Zoom Interface */
+        .control-bar {
+            display: flex; gap: 15px; margin-top: 10px; z-index: 5;
         }
-        #scene-img { width: 100%; height: 100%; display: block; object-fit: fill; cursor: crosshair; }
+        .tool-btn {
+            background: #2c1d11; border: 1px solid #e67e22; color: #fff;
+            padding: 8px 18px; border-radius: 20px; font-weight: bold; cursor: pointer;
+        }
+        .tool-btn:active { background: #e67e22; }
+
+        /* Enlarged Adaptive Viewport Panel */
+        #scene-container {
+            position: relative; width: 98%; max-width: 1100px;
+            aspect-ratio: 1.63 / 1; margin: 15px 0;
+            border: 4px solid #3a271a; border-radius: 12px;
+            overflow: hidden; box-shadow: 0 12px 35px rgba(0,0,0,0.8);
+            background: #000;
+        }
+        #zoom-wrapper {
+            width: 100%; height: 100%;
+            transition: transform 0.2s ease-out;
+            transform-origin: center center;
+        }
+        #scene-img { 
+            width: 100%; height: 100%; display: block; 
+            object-fit: fill; cursor: crosshair; 
+        }
 
         .ring-indicator {
             position: absolute; border-radius: 50%; pointer-events: none;
@@ -65,9 +85,6 @@
             font-size: 16px; cursor: pointer; background: #e67e22; color: #fff;
             box-shadow: 0 4px 0 #a05010; transition: transform 0.1s; margin: 10px;
         }
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #a05010; }
-        .btn-gold { background: #f1c40f; color: #000; box-shadow: 0 4px 0 #bc950a; }
-
         input {
             padding: 15px; border-radius: 10px; border: 2px solid #e67e22;
             background: #000; color: #fff; font-size: 18px; text-align: center;
@@ -78,29 +95,30 @@
 <body>
 
     <div class="header">
-        <div class="hud-title" id="stage-label">SCENE 1/8</div>
-        <div class="hud-timer" id="timer-text">00:40</div>
+        <div class="hud-title" id="stage-label">CASE 1/5</div>
+        <div class="hud-timer" id="timer-text">01:00</div>
         <div class="hud-score">STREAK: <span id="streak-num">0</span></div>
     </div>
 
     <div class="tray-container" id="tray"></div>
 
+    <div class="control-bar">
+        <button class="tool-btn" onclick="adjustZoom(0.25)">🔍 ZOOM +</button>
+        <button class="tool-btn" onclick="adjustZoom(-0.25)">🔍 ZOOM -</button>
+        <button class="tool-btn" onclick="resetZoom()">🔄 RESET</button>
+    </div>
+
     <div id="scene-container">
-        <img id="scene-img" src="" alt="Investigation Scene">
+        <div id="zoom-wrapper">
+            <img id="scene-img" src="" alt="Investigation Scene">
+        </div>
     </div>
 
     <div id="start-panel" class="panel-overlay" style="display: flex;">
-        <h1 style="color: #e67e22; font-size: 42px; margin-bottom: 5px;">OFFLINE DETECTIVE</h1>
-        <p style="color: #aaa; margin-bottom: 30px;">Locate missing anomalies running locally from your SD Card folder.</p>
+        <h1 style="color: #e67e22; font-size: 42px; margin-bottom: 5px;">NEW CASE INVESTIGATOR</h1>
+        <p style="color: #aaa; margin-bottom: 30px;">5 New Maps • 5 Targets Per Stage • 1 Minute Match Time</p>
         <input type="text" id="nameInput" placeholder="Enter Agent Initials">
         <button class="btn" onclick="initiateGame()">BEGIN CASE</button>
-        <button class="btn btn-gold" onclick="displayRecords()">🏆 RECORDS</button>
-    </div>
-
-    <div id="records-panel" class="panel-overlay">
-        <h1 style="color: #f1c40f;">🏆 HIGH INVESTIGATORS</h1>
-        <div id="records-box" style="font-size: 22px; margin: 30px 0; line-height: 1.8;"></div>
-        <button class="btn" onclick="hideRecords()">BACK</button>
     </div>
 
     <div id="clear-panel" class="panel-overlay">
@@ -111,87 +129,72 @@
 
     <script>
         const img = document.getElementById('scene-img');
+        const zoomWrapper = document.getElementById('zoom-wrapper');
         const container = document.getElementById('scene-container');
         const tray = document.getElementById('tray');
 
         let currentStageIndex = 0;
-        let timeRemaining = 40;
+        let timeRemaining = 60;
         let clockInterval = null;
         let agentName = "";
         let globalStreak = 0;
+        let currentZoomScale = 1;
 
-        /* Using relative file paths. The code automatically looks in the local directory folder! */
+        /* Re-mapped coordinates specifically tracking target patterns across your 5 new images */
         const levelManifest = [
             {
-                title: "THE GRAND ATELIER",
-                src: "30436.webp", 
+                title: "CASE 1: THE TOY COLLECTOR",
+                src: "30580.png", 
                 clues: [
-                    { name: "Eiffel Tower Mirror", x: 554, y: 225, r: 35, found: false },
-                    { name: "Leather Boot", x: 310, y: 520, r: 30, found: false },
-                    { name: "Chandelier Globe", x: 523, y: 110, r: 25, found: false }
+                    { name: "Big Ben Miniature", x: 710, y: 440, r: 35, found: false },
+                    { name: "Brown Fedora Hat", x: 495, y: 485, r: 30, found: false },
+                    { name: "Eiffel Postcard", x: 680, y: 220, r: 40, found: false },
+                    { name: "Green Train Engine", x: 320, y: 560, r: 35, found: false },
+                    { name: "Vintage Desk Clock", x: 735, y: 780, r: 35, found: false }
                 ]
             },
             {
-                title: "THE CHAOTIC STUDY",
-                src: "30437.jpg",
+                title: "CASE 2: THE ANTIQUE VAULT",
+                src: "30581.png",
                 clues: [
-                    { name: "Yellow Rubber Duck", x: 247, y: 395, r: 30, found: false },
-                    { name: "Hanger Rack", x: 133, y: 240, r: 40, found: false },
-                    { name: "Globe Sphere", x: 205, y: 340, r: 30, found: false }
+                    { name: "Eiffel Painting", x: 546, y: 215, r: 35, found: false },
+                    { name: "Artist Stool", x: 478, y: 410, r: 30, found: false },
+                    { name: "Classic Bust Statue", x: 472, y: 210, r: 25, found: false },
+                    { name: "Canvas Palette", x: 475, y: 350, r: 25, found: false },
+                    { name: "Timber Easel Frame", x: 435, y: 150, r: 35, found: false }
                 ]
             },
             {
-                title: "THE SUNNY FARMYARD",
-                src: "30438.jpg",
+                title: "CASE 3: THE GRAND LIBRARY",
+                src: "30582.png",
                 clues: [
-                    { name: "Green Micro Car", x: 673, y: 512, r: 45, found: false },
-                    { name: "Red Tractor Wheel", x: 104, y: 367, r: 35, found: false },
-                    { name: "Brown Stallion", x: 462, y: 243, r: 35, found: false }
+                    { name: "Terrestrial Globe", x: 302, y: 255, r: 30, found: false },
+                    { name: "Antique Writing Desk", x: 358, y: 340, r: 45, found: false },
+                    { name: "Curved Library Ladder", x: 172, y: 200, r: 35, found: false },
+                    { name: "Velvet Lounge Chair", x: 225, y: 345, r: 40, found: false },
+                    { name: "Brass Chandelier", x: 304, y: 25, r: 30, found: false }
                 ]
             },
             {
-                title: "THE TRAIN STATION",
-                src: "30447.png", 
+                title: "CASE 4: THE SPICE BAZAAR",
+                src: "30583.png", 
                 clues: [
-                    { name: "Station Clock Face", x: 747, y: 155, r: 45, found: false },
-                    { name: "Pocket Compass", x: 338, y: 900, r: 40, found: false },
-                    { name: "Sleeping Cat", x: 865, y: 915, r: 40, found: false }
+                    { name: "Golden Tea Kettle", x: 755, y: 430, r: 35, found: false },
+                    { name: "Blue Ceramic Teapot", x: 735, y: 400, r: 25, found: false },
+                    { name: "Deep Blue Powder Sack", x: 660, y: 420, r: 35, found: false },
+                    { name: "Yellow Curry Sack", x: 698, y: 415, r: 35, found: false },
+                    { name: "Hanging Textiles", x: 615, y: 40, r: 40, found: false }
                 ]
             },
             {
-                title: "THE POST OFFICE",
-                src: "30448.png",
+                title: "CASE 5: THE BOTANICAL GREENHOUSE",
+                src: "30584.png",
                 clues: [
-                    { name: "Mechanical Counter Scale", x: 290, y: 495, r: 45, found: false },
-                    { name: "Mail Sorter Bags", x: 350, y: 830, r: 50, found: false },
-                    { name: "Vintage Desk Key", x: 890, y: 900, r: 35, found: false }
-                ]
-            },
-            {
-                title: "THE CLASSROOM",
-                src: "30449.png",
-                clues: [
-                    { name: "Chalkboard Equation", x: 535, y: 395, r: 50, found: false },
-                    { name: "Desk Globe Map", x: 270, y: 445, r: 40, found: false },
-                    { name: "Sharpener Base", x: 915, y: 915, r: 35, found: false }
-                ]
-            },
-            {
-                title: "THE OLD LIBRARY",
-                src: "30450.png",
-                clues: [
-                    { name: "Brass Telescope", x: 140, y: 420, r: 45, found: false },
-                    { name: "World Desk Map", x: 460, y: 745, r: 55, found: false },
-                    { name: "Reading Glasses", x: 790, y: 915, r: 35, found: false }
-                ]
-            },
-            {
-                title: "THE CITY ZOO",
-                src: "30451.png",
-                clues: [
-                    { name: "Golden Birdcage", x: 535, y: 495, r: 50, found: false },
-                    { name: "Sitting Lion Cub", x: 100, y: 850, r: 45, found: false },
-                    { name: "Field Binoculars", x: 785, y: 885, r: 40, found: false }
+                    { name: "Glass Terrarium Orb", x: 860, y: 250, r: 35, found: false },
+                    { name: "Hanging Plant Basket", x: 910, y: 60, r: 30, found: false },
+                    { name: "Tropical Pink Bloom", x: 830, y: 405, r: 30, found: false },
+                    { name: "Terracotta Flowerpot", x: 922, y: 410, r: 25, found: false },
+                    { name: "Indoor Water Stream", x: 910, y: 310, r: 35, found: false }
                 ]
             }
         ];
@@ -207,7 +210,9 @@
 
         function loadStage() {
             const currentStage = levelManifest[currentStageIndex];
-            document.getElementById('stage-label').innerText = `SCENE ${currentStageIndex + 1}/${levelManifest.length}`;
+            document.getElementById('stage-label').innerText = `CASE ${currentStageIndex + 1}/${levelManifest.length}`;
+            resetZoom();
+            
             img.src = currentStage.src;
 
             currentStage.clues.forEach(c => c.found = false);
@@ -225,7 +230,17 @@
             });
         }
 
-        container.onclick = function(e) {
+        function adjustZoom(amount) {
+            currentZoomScale = Math.min(3, Math.max(1, currentZoomScale + amount));
+            zoomWrapper.style.transform = `scale(${currentZoomScale})`;
+        }
+
+        function resetZoom() {
+            currentZoomScale = 1;
+            zoomWrapper.style.transform = `scale(1)`;
+        }
+
+        img.onclick = function(e) {
             if (timeRemaining <= 0) return;
             
             const dimensions = img.getBoundingClientRect();
@@ -244,17 +259,20 @@
                 if (clue.found) continue;
                 
                 let range = Math.hypot(computedX - clue.x, computedY - clue.y);
-                if (range <= clue.r) {
+                if (range <= (clue.r * currentZoomScale)) {
                     clue.found = true;
                     isMatch = true;
-                    renderPulseRing(e.clientX - container.getBoundingClientRect().left, e.clientY - container.getBoundingClientRect().top, 'ring-match');
+                    
+                    const rect = container.getBoundingClientRect();
+                    renderPulseRing(e.clientX - rect.left, e.clientY - rect.top, 'ring-match');
                     generateTrayMarkup();
                     break;
                 }
             }
 
             if (!isMatch) {
-                renderPulseRing(e.clientX - container.getBoundingClientRect().left, e.clientY - container.getBoundingClientRect().top, 'ring-miss');
+                const rect = container.getBoundingClientRect();
+                renderPulseRing(e.clientX - rect.left, e.clientY - rect.top, 'ring-miss');
             } else {
                 if (activeClues.every(c => c.found)) {
                     terminateCountdown();
@@ -273,7 +291,7 @@
         }
 
         function startCountdown() {
-            timeRemaining = Math.max(20, 45 - (currentStageIndex * 3));
+            timeRemaining = 60; // Locked 1-minute tracking window speed limits
             updateCountdownText();
             clearInterval(clockInterval);
             clockInterval = setInterval(() => {
@@ -305,9 +323,8 @@
             if (isVictory) {
                 globalStreak++;
                 document.getElementById('streak-num').innerText = globalStreak;
-                writePersistentRecord(globalStreak);
 
-                header.innerText = "SCENE SOLVED!";
+                header.innerText = "CASE SOLVED!";
                 header.style.color = "#00ff88";
                 commentary.innerText = `Sensational tracking, ${agentName}! ${levelManifest[currentStageIndex].title} cleared.`;
                 actionBtn.innerText = currentStageIndex === levelManifest.length - 1 ? "FINISH ASSIGNMENT" : "NEXT LOCATION";
@@ -319,6 +336,7 @@
             }
         }
 
+        /* Forward progression state controller pipeline loops */
         function progressPipeline() {
             document.getElementById('clear-panel').style.display = "none";
             const currentStage = levelManifest[currentStageIndex];
@@ -336,21 +354,6 @@
                 document.getElementById('start-panel').style.display = "flex";
             }
         }
-
-        function writePersistentRecord(streakVal) {
-            const historicBest = JSON.parse(localStorage.getItem('detectiveTopStreak')) || { user: "N/A", score: 0 };
-            if (streakVal > historicBest.score) {
-                localStorage.setItem('detectiveTopStreak', JSON.stringify({ user: agentName, score: streakVal }));
-            }
-        }
-
-        function displayRecords() {
-            const scoreObj = JSON.parse(localStorage.getItem('detectiveTopStreak')) || { user: "None", score: 0 };
-            document.getElementById('records-box').innerHTML = `Chief Agent: <b style='color:#00ff88'>${scoreObj.user}</b><br>Max Areas Uncovered: <b style='color:#f1c40f'>${scoreObj.score} Scenes</b>`;
-            document.getElementById('records-panel').style.display = "flex";
-        }
-
-        function hideRecords() { document.getElementById('records-panel').style.display = "none"; }
     </script>
 </body>
 </html>
