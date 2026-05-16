@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hidden Detective: Offline SD Edition</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0; width: 100vw; height: 100vh;
+            background: #140f0b; font-family: 'Segoe UI', sans-serif; color: #fff;
+            display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
+        }
+
+        .header {
+            width: 100%; height: 60px; background: #000; padding: 0 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 3px solid #e67e22; z-index: 10;
+        }
+        .hud-title { color: #e67e22; font-weight: 900; letter-spacing: 1px; }
+        .hud-timer { color: #ff4444; font-size: 20px; font-weight: bold; }
+        .hud-score { color: #00ff88; font-weight: bold; }
+
+        .tray-container {
+            width: 100%; background: #221810; padding: 12px;
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 12px;
+            border-bottom: 2px solid #3a271a; min-height: 55px;
+        }
+        .clue-tag {
+            background: #0f0a06; padding: 6px 16px; border-radius: 20px;
+            border: 1px solid #e67e22; font-size: 14px; transition: all 0.3s;
+        }
+        .clue-tag.found {
+            background: #1b3d1e; border-color: #00ff88; color: #85ff9e;
+            text-decoration: line-through; opacity: 0.5;
+        }
+
+        #scene-container {
+            position: relative; width: 95%; max-width: 800px;
+            aspect-ratio: 1.63 / 1; margin: 20px 0;
+            border: 5px solid #3a271a; border-radius: 12px;
+            overflow: hidden; box-shadow: 0 12px 35px rgba(0,0,0,0.8);
+        }
+        #scene-img { width: 100%; height: 100%; display: block; object-fit: fill; cursor: crosshair; }
+
+        .ring-indicator {
+            position: absolute; border-radius: 50%; pointer-events: none;
+            transform: translate(-50%, -50%); z-index: 5;
+        }
+        .ring-match { border: 4px solid #00ff88; animation: burst 0.4s ease-out forwards; }
+        .ring-miss { border: 4px solid #ff4444; animation: burst 0.4s ease-out forwards; }
+
+        @keyframes burst {
+            0% { width: 10px; height: 10px; opacity: 1; }
+            100% { width: 45px; height: 45px; opacity: 0; }
+        }
+
+        .panel-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 10, 6, 0.98); display: none; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 25px;
+        }
+        .btn {
+            padding: 15px 40px; border-radius: 30px; border: none; font-weight: bold;
+            font-size: 16px; cursor: pointer; background: #e67e22; color: #fff;
+            box-shadow: 0 4px 0 #a05010; transition: transform 0.1s; margin: 10px;
+        }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #a05010; }
+        .btn-gold { background: #f1c40f; color: #000; box-shadow: 0 4px 0 #bc950a; }
+
+        input {
+            padding: 15px; border-radius: 10px; border: 2px solid #e67e22;
+            background: #000; color: #fff; font-size: 18px; text-align: center;
+            width: 260px; margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="hud-title" id="stage-label">SCENE 1/8</div>
+        <div class="hud-timer" id="timer-text">00:40</div>
+        <div class="hud-score">STREAK: <span id="streak-num">0</span></div>
+    </div>
+
+    <div class="tray-container" id="tray"></div>
+
+    <div id="scene-container">
+        <img id="scene-img" src="" alt="Investigation Scene">
+    </div>
+
+    <div id="start-panel" class="panel-overlay" style="display: flex;">
+        <h1 style="color: #e67e22; font-size: 42px; margin-bottom: 5px;">OFFLINE DETECTIVE</h1>
+        <p style="color: #aaa; margin-bottom: 30px;">Locate missing anomalies running locally from your SD Card folder.</p>
+        <input type="text" id="nameInput" placeholder="Enter Agent Initials">
+        <button class="btn" onclick="initiateGame()">BEGIN CASE</button>
+        <button class="btn btn-gold" onclick="displayRecords()">🏆 RECORDS</button>
+    </div>
+
+    <div id="records-panel" class="panel-overlay">
+        <h1 style="color: #f1c40f;">🏆 HIGH INVESTIGATORS</h1>
+        <div id="records-box" style="font-size: 22px; margin: 30px 0; line-height: 1.8;"></div>
+        <button class="btn" onclick="hideRecords()">BACK</button>
+    </div>
+
+    <div id="clear-panel" class="panel-overlay">
+        <h1 style="color: #00ff88; font-size: 40px;" id="clear-header">SCENE CLEARED</h1>
+        <p id="clear-commentary" style="color: #ccc; margin-bottom: 25px; font-size: 18px;"></p>
+        <button class="btn" id="action-step-btn" onclick="progressPipeline()">CONTINUE</button>
+    </div>
+
+    <script>
+        const img = document.getElementById('scene-img');
+        const container = document.getElementById('scene-container');
+        const tray = document.getElementById('tray');
+
+        let currentStageIndex = 0;
+        let timeRemaining = 40;
+        let clockInterval = null;
+        let agentName = "";
+        let globalStreak = 0;
+
+        /* Using relative file paths. The code automatically looks in the local directory folder! */
+        const levelManifest = [
+            {
+                title: "THE GRAND ATELIER",
+                src: "30436.webp", 
+                clues: [
+                    { name: "Eiffel Tower Mirror", x: 554, y: 225, r: 35, found: false },
+                    { name: "Leather Boot", x: 310, y: 520, r: 30, found: false },
+                    { name: "Chandelier Globe", x: 523, y: 110, r: 25, found: false }
+                ]
+            },
+            {
+                title: "THE CHAOTIC STUDY",
+                src: "30437.jpg",
+                clues: [
+                    { name: "Yellow Rubber Duck", x: 247, y: 395, r: 30, found: false },
+                    { name: "Hanger Rack", x: 133, y: 240, r: 40, found: false },
+                    { name: "Globe Sphere", x: 205, y: 340, r: 30, found: false }
+                ]
+            },
+            {
+                title: "THE SUNNY FARMYARD",
+                src: "30438.jpg",
+                clues: [
+                    { name: "Green Micro Car", x: 673, y: 512, r: 45, found: false },
+                    { name: "Red Tractor Wheel", x: 104, y: 367, r: 35, found: false },
+                    { name: "Brown Stallion", x: 462, y: 243, r: 35, found: false }
+                ]
+            },
+            {
+                title: "THE TRAIN STATION",
+                src: "30447.png", 
+                clues: [
+                    { name: "Station Clock Face", x: 747, y: 155, r: 45, found: false },
+                    { name: "Pocket Compass", x: 338, y: 900, r: 40, found: false },
+                    { name: "Sleeping Cat", x: 865, y: 915, r: 40, found: false }
+                ]
+            },
+            {
+                title: "THE POST OFFICE",
+                src: "30448.png",
+                clues: [
+                    { name: "Mechanical Counter Scale", x: 290, y: 495, r: 45, found: false },
+                    { name: "Mail Sorter Bags", x: 350, y: 830, r: 50, found: false },
+                    { name: "Vintage Desk Key", x: 890, y: 900, r: 35, found: false }
+                ]
+            },
+            {
+                title: "THE CLASSROOM",
+                src: "30449.png",
+                clues: [
+                    { name: "Chalkboard Equation", x: 535, y: 395, r: 50, found: false },
+                    { name: "Desk Globe Map", x: 270, y: 445, r: 40, found: false },
+                    { name: "Sharpener Base", x: 915, y: 915, r: 35, found: false }
+                ]
+            },
+            {
+                title: "THE OLD LIBRARY",
+                src: "30450.png",
+                clues: [
+                    { name: "Brass Telescope", x: 140, y: 420, r: 45, found: false },
+                    { name: "World Desk Map", x: 460, y: 745, r: 55, found: false },
+                    { name: "Reading Glasses", x: 790, y: 915, r: 35, found: false }
+                ]
+            },
+            {
+                title: "THE CITY ZOO",
+                src: "30451.png",
+                clues: [
+                    { name: "Golden Birdcage", x: 535, y: 495, r: 50, found: false },
+                    { name: "Sitting Lion Cub", x: 100, y: 850, r: 45, found: false },
+                    { name: "Field Binoculars", x: 785, y: 885, r: 40, found: false }
+                ]
+            }
+        ];
+
+        function initiateGame() {
+            agentName = document.getElementById('nameInput').value.trim() || "Agent X";
+            document.getElementById('start-panel').style.display = "none";
+            currentStageIndex = 0;
+            globalStreak = 0;
+            document.getElementById('streak-num').innerText = globalStreak;
+            loadStage();
+        }
+
+        function loadStage() {
+            const currentStage = levelManifest[currentStageIndex];
+            document.getElementById('stage-label').innerText = `SCENE ${currentStageIndex + 1}/${levelManifest.length}`;
+            img.src = currentStage.src;
+
+            currentStage.clues.forEach(c => c.found = false);
+            generateTrayMarkup();
+            startCountdown();
+        }
+
+        function generateTrayMarkup() {
+            tray.innerHTML = "";
+            levelManifest[currentStageIndex].clues.forEach(clue => {
+                const badge = document.createElement('div');
+                badge.className = `clue-tag ${clue.found ? 'found' : ''}`;
+                badge.innerText = clue.name;
+                tray.appendChild(badge);
+            });
+        }
+
+        container.onclick = function(e) {
+            if (timeRemaining <= 0) return;
+            
+            const dimensions = img.getBoundingClientRect();
+            const currentStage = levelManifest[currentStageIndex];
+
+            const scaleFactorX = 1000 / dimensions.width;
+            const scaleFactorY = 613 / dimensions.height;
+
+            const computedX = (e.clientX - dimensions.left) * scaleFactorX;
+            const computedY = (e.clientY - dimensions.top) * scaleFactorY;
+
+            let isMatch = false;
+            const activeClues = currentStage.clues;
+
+            for (let clue of activeClues) {
+                if (clue.found) continue;
+                
+                let range = Math.hypot(computedX - clue.x, computedY - clue.y);
+                if (range <= clue.r) {
+                    clue.found = true;
+                    isMatch = true;
+                    renderPulseRing(e.clientX - container.getBoundingClientRect().left, e.clientY - container.getBoundingClientRect().top, 'ring-match');
+                    generateTrayMarkup();
+                    break;
+                }
+            }
+
+            if (!isMatch) {
+                renderPulseRing(e.clientX - container.getBoundingClientRect().left, e.clientY - container.getBoundingClientRect().top, 'ring-miss');
+            } else {
+                if (activeClues.every(c => c.found)) {
+                    terminateCountdown();
+                    triggerEvaluationScreen(true);
+                }
+            }
+        };
+
+        function renderPulseRing(posX, posY, typeClass) {
+            const burstNode = document.createElement('div');
+            burstNode.className = `ring-indicator ${typeClass}`;
+            burstNode.style.left = `${posX}px`;
+            burstNode.style.top = `${posY}px`;
+            container.appendChild(burstNode);
+            setTimeout(() => burstNode.remove(), 400);
+        }
+
+        function startCountdown() {
+            timeRemaining = Math.max(20, 45 - (currentStageIndex * 3));
+            updateCountdownText();
+            clearInterval(clockInterval);
+            clockInterval = setInterval(() => {
+                timeRemaining--;
+                updateCountdownText();
+                if (timeRemaining <= 0) {
+                    terminateCountdown();
+                    triggerEvaluationScreen(false);
+                }
+            }, 1000);
+        }
+
+        function updateCountdownText() {
+            const minutes = String(Math.floor(timeRemaining / 60)).padStart(2, '0');
+            const seconds = String(timeRemaining % 60).padStart(2, '0');
+            document.getElementById('timer-text').innerText = `${minutes}:${seconds}`;
+        }
+
+        function terminateCountdown() { clearInterval(clockInterval); }
+
+        function triggerEvaluationScreen(isVictory) {
+            const modal = document.getElementById('clear-panel');
+            const header = document.getElementById('clear-header');
+            const commentary = document.getElementById('clear-commentary');
+            const actionBtn = document.getElementById('action-step-btn');
+            
+            modal.style.display = "flex";
+
+            if (isVictory) {
+                globalStreak++;
+                document.getElementById('streak-num').innerText = globalStreak;
+                writePersistentRecord(globalStreak);
+
+                header.innerText = "SCENE SOLVED!";
+                header.style.color = "#00ff88";
+                commentary.innerText = `Sensational tracking, ${agentName}! ${levelManifest[currentStageIndex].title} cleared.`;
+                actionBtn.innerText = currentStageIndex === levelManifest.length - 1 ? "FINISH ASSIGNMENT" : "NEXT LOCATION";
+            } else {
+                header.innerText = "CASE COLD";
+                header.style.color = "#ff4444";
+                commentary.innerText = `The target objects slipped away. Resetting tracking parameters to Room 1.`;
+                actionBtn.innerText = "RETRY INTELLIGENCE";
+            }
+        }
+
+        function progressPipeline() {
+            document.getElementById('clear-panel').style.display = "none";
+            const currentStage = levelManifest[currentStageIndex];
+            const allCleared = currentStage.clues.every(c => c.found);
+
+            if (allCleared) {
+                if (currentStageIndex < levelManifest.length - 1) {
+                    currentStageIndex++;
+                    loadStage();
+                } else {
+                    document.getElementById('start-panel').style.display = "flex";
+                }
+            } else {
+                currentStageIndex = 0;
+                document.getElementById('start-panel').style.display = "flex";
+            }
+        }
+
+        function writePersistentRecord(streakVal) {
+            const historicBest = JSON.parse(localStorage.getItem('detectiveTopStreak')) || { user: "N/A", score: 0 };
+            if (streakVal > historicBest.score) {
+                localStorage.setItem('detectiveTopStreak', JSON.stringify({ user: agentName, score: streakVal }));
+            }
+        }
+
+        function displayRecords() {
+            const scoreObj = JSON.parse(localStorage.getItem('detectiveTopStreak')) || { user: "None", score: 0 };
+            document.getElementById('records-box').innerHTML = `Chief Agent: <b style='color:#00ff88'>${scoreObj.user}</b><br>Max Areas Uncovered: <b style='color:#f1c40f'>${scoreObj.score} Scenes</b>`;
+            document.getElementById('records-panel').style.display = "flex";
+        }
+
+        function hideRecords() { document.getElementById('records-panel').style.display = "none"; }
+    </script>
+</body>
+</html>
