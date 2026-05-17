@@ -95,7 +95,7 @@
 <body>
 
     <div class="header">
-        <div class="hud-title" id="stage-label">CASE 1/5</div>
+        <div class="hud-title" id="stage-label">CASE 1/4</div>
         <div class="hud-timer" id="timer-text">01:00</div>
         <div class="hud-score">STREAK: <span id="streak-num">0</span></div>
     </div>
@@ -116,7 +116,7 @@
 
     <div id="start-panel" class="panel-overlay" style="display: flex;">
         <h1 style="color: #e67e22; font-size: 42px; margin-bottom: 5px;">NEW CASE INVESTIGATOR</h1>
-        <p style="color: #aaa; margin-bottom: 30px;">5 New Maps • 5 Targets Per Stage • 1 Minute Match Time</p>
+        <p style="color: #aaa; margin-bottom: 30px;">4 New Maps • 5 Targets Per Stage • 1 Minute Match Time</p>
         <input type="text" id="nameInput" placeholder="Enter Agent Initials">
         <button class="btn" onclick="initiateGame()">BEGIN CASE</button>
     </div>
@@ -140,61 +140,50 @@
         let globalStreak = 0;
         let currentZoomScale = 1;
 
-        /* Re-mapped coordinates specifically tracking target patterns across your 5 new images */
+        /* Re-mapped coordinates specifically tracking target patterns across your 4 new images */
         const levelManifest = [
             {
-                title: "CASE 1: THE TOY COLLECTOR",
-                src: "30580.png", 
+                title: "CASE 1: THE TOY STUDY ROOM",
+                src: "30592.png", 
                 clues: [
-                    { name: "Big Ben Miniature", x: 710, y: 440, r: 35, found: false },
-                    { name: "Brown Fedora Hat", x: 495, y: 485, r: 30, found: false },
-                    { name: "Eiffel Postcard", x: 680, y: 220, r: 40, found: false },
-                    { name: "Green Train Engine", x: 320, y: 560, r: 35, found: false },
-                    { name: "Vintage Desk Clock", x: 735, y: 780, r: 35, found: false }
+                    { name: "Terrestrial Globe", x: 110, y: 155, r: 35, found: false },
+                    { name: "Pink Piggy Bank", x: 900, y: 735, r: 35, found: false },
+                    { name: "Africa Map Poster", x: 470, y: 430, r: 40, found: false },
+                    { name: "Green Desk Lamp", x: 150, y: 775, r: 35, found: false },
+                    { name: "Abacus Frame", x: 950, y: 475, r: 35, found: false }
                 ]
             },
             {
-                title: "CASE 2: THE ANTIQUE VAULT",
-                src: "30581.png",
+                title: "CASE 2: THE OCEAN VIEW LOUNGE",
+                src: "30680.png",
                 clues: [
-                    { name: "Eiffel Painting", x: 546, y: 215, r: 35, found: false },
-                    { name: "Artist Stool", x: 478, y: 410, r: 30, found: false },
-                    { name: "Classic Bust Statue", x: 472, y: 210, r: 25, found: false },
-                    { name: "Canvas Palette", x: 475, y: 350, r: 25, found: false },
-                    { name: "Timber Easel Frame", x: 435, y: 150, r: 35, found: false }
+                    { name: "Hanging Blue Dress", x: 530, y: 360, r: 35, found: false },
+                    { name: "Yellow Straw Hat", x: 510, y: 525, r: 30, found: false },
+                    { name: "Toy Wooden Horse", x: 840, y: 860, r: 25, found: false },
+                    { name: "Vintage Brass Compass", x: 410, y: 645, r: 25, found: false },
+                    { name: "Large Burlap Sack", x: 630, y: 720, r: 40, found: false }
                 ]
             },
             {
-                title: "CASE 3: THE GRAND LIBRARY",
-                src: "30582.png",
+                title: "CASE 3: THE FOREST PLAYGROUND",
+                src: "30682.png",
                 clues: [
-                    { name: "Terrestrial Globe", x: 302, y: 255, r: 30, found: false },
-                    { name: "Antique Writing Desk", x: 358, y: 340, r: 45, found: false },
-                    { name: "Curved Library Ladder", x: 172, y: 200, r: 35, found: false },
-                    { name: "Velvet Lounge Chair", x: 225, y: 345, r: 40, found: false },
-                    { name: "Brass Chandelier", x: 304, y: 25, r: 30, found: false }
+                    { name: "Wooden Treehouse", x: 630, y: 160, r: 45, found: false },
+                    { name: "Striped Playground Ball", x: 550, y: 770, r: 35, found: false },
+                    { name: "Sitting Tree Bird", x: 910, y: 185, r: 25, found: false },
+                    { name: "Magnifying Glass", x: 705, y: 930, r: 30, found: false },
+                    { name: "Hanging Tree Clock", x: 95, y: 135, r: 30, found: false }
                 ]
             },
             {
-                title: "CASE 4: THE SPICE BAZAAR",
-                src: "30583.png", 
+                title: "CASE 4: THE NEON BEDROOM",
+                src: "30684.png", 
                 clues: [
-                    { name: "Golden Tea Kettle", x: 755, y: 430, r: 35, found: false },
-                    { name: "Blue Ceramic Teapot", x: 735, y: 400, r: 25, found: false },
-                    { name: "Deep Blue Powder Sack", x: 660, y: 420, r: 35, found: false },
-                    { name: "Yellow Curry Sack", x: 698, y: 415, r: 35, found: false },
-                    { name: "Hanging Textiles", x: 615, y: 40, r: 40, found: false }
-                ]
-            },
-            {
-                title: "CASE 5: THE BOTANICAL GREENHOUSE",
-                src: "30584.png",
-                clues: [
-                    { name: "Glass Terrarium Orb", x: 860, y: 250, r: 35, found: false },
-                    { name: "Hanging Plant Basket", x: 910, y: 60, r: 30, found: false },
-                    { name: "Tropical Pink Bloom", x: 830, y: 405, r: 30, found: false },
-                    { name: "Terracotta Flowerpot", x: 922, y: 410, r: 25, found: false },
-                    { name: "Indoor Water Stream", x: 910, y: 310, r: 35, found: false }
+                    { name: "Laptop Workspace", x: 440, y: 815, r: 45, found: false },
+                    { name: "Sleeping Orange Cat", x: 590, y: 495, r: 30, found: false },
+                    { name: "Orrery Solar Model", x: 135, y: 110, r: 35, found: false },
+                    { name: "Cloud Ceiling Fan", x: 510, y: 75, r: 40, found: false },
+                    { name: "Plush Unicorn Toy", x: 875, y: 585, r: 25, found: false }
                 ]
             }
         ];
@@ -246,11 +235,17 @@
             const dimensions = img.getBoundingClientRect();
             const currentStage = levelManifest[currentStageIndex];
 
-            const scaleFactorX = 1000 / dimensions.width;
-            const scaleFactorY = 613 / dimensions.height;
+            // Extract unscaled dimensions to bypass layout zoom properties
+            const unscaledWidth = dimensions.width / currentZoomScale;
+            const unscaledHeight = dimensions.height / currentZoomScale;
 
-            const computedX = (e.clientX - dimensions.left) * scaleFactorX;
-            const computedY = (e.clientY - dimensions.top) * scaleFactorY;
+            // Isolate layout positioning maps relative to centered zoom offsets
+            const clickXRelative = e.clientX - (dimensions.left + (dimensions.width - unscaledWidth) / 2);
+            const clickYRelative = e.clientY - (dimensions.top + (dimensions.height - unscaledHeight) / 2);
+
+            // Project coordinates directly back onto the 1000 x 613 baseline asset grid
+            const computedX = clickXRelative * (1000 / unscaledWidth);
+            const computedY = clickYRelative * (613 / unscaledHeight);
 
             let isMatch = false;
             const activeClues = currentStage.clues;
@@ -259,7 +254,7 @@
                 if (clue.found) continue;
                 
                 let range = Math.hypot(computedX - clue.x, computedY - clue.y);
-                if (range <= (clue.r * currentZoomScale)) {
+                if (range <= clue.r) {
                     clue.found = true;
                     isMatch = true;
                     
@@ -291,7 +286,7 @@
         }
 
         function startCountdown() {
-            timeRemaining = 60; // Locked 1-minute tracking window speed limits
+            timeRemaining = 60;
             updateCountdownText();
             clearInterval(clockInterval);
             clockInterval = setInterval(() => {
@@ -336,7 +331,6 @@
             }
         }
 
-        /* Forward progression state controller pipeline loops */
         function progressPipeline() {
             document.getElementById('clear-panel').style.display = "none";
             const currentStage = levelManifest[currentStageIndex];
